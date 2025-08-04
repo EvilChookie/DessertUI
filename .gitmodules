@@ -1,0 +1,6 @@
+[submodule "Libs/Libs/oUF"]
+	path = Libs/Libs/oUF
+	url = https://github.com/oUF-wow/oUF.git
+[submodule "Libs/oUF"]
+	path = Libs/oUF
+	url = https://github.com/oUF-wow/oUF.git
