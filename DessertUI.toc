@@ -1,0 +1,68 @@
+## Interface: 120000
+## Title: |cffffffffDessert|cffdc143cUI|r
+## Notes: A Tasty UI for World of Warcraft
+## Author: Xervish@Nagrand-US
+## Version: 1.0.0
+## SavedVariables: DessertUIDB
+## X-oUF: DessertUI
+## IconTexture: 237362
+## OptionalDeps: Masque
+
+# Unit Frames
+## Category: Unit Frames
+## Category-deDE: Einheitenfenster
+## Category-esES: Marcos de unidades
+## Category-esMX: Marcos de unidades
+## Category-frFR: Portraits d'unités
+## Category-itIT: Riquadri delle unità
+## Category-koKR: 개체창
+## Category-ptBR: Quadros de unidade
+## Category-ruRU: Рамки юнитов
+## Category-zhCN: 单位框体
+## Category-zhTW: 單位框架
+
+# User Interface
+## Category: User Interface
+## Category-deDE: Benutzerinterface
+## Category-esES: Interfaz de usuario
+## Category-esMX: Interfaz de usuario
+## Category-frFR: Interface utilisateur
+## Category-itIT: Interfaccia utente
+## Category-koKR: 사용자 인터페이스
+## Category-ptBR: Interface do usuário
+## Category-ruRU: Интерфейс пользователя
+## Category-zhCN: 用户界面
+## Category-zhTW: 使用者介面
+
+# Libraries
+Libs\LibStub\LibStub.lua
+Libs\LibDispel\LibDispel.xml
+Libs\oUF\oUF.xml
+
+Modules\Core\Constants.lua
+Modules\Core\Slash.lua
+Modules\Core\Utils.lua
+Modules\Core\Fader.lua
+Modules\Core\Settings.lua
+
+# Smaller Modules
+Modules\Faders\Faders.lua
+Modules\Hotkeys\Hotkeys.lua
+Modules\Chat\Chat.lua
+Modules\CombatText\CombatText.lua
+Modules\Masque\Masque.lua
+
+# UnitFrames Module
+Modules\UnitFrames\Tags.lua
+Modules\UnitFrames\Common.lua
+Modules\UnitFrames\UnitFrames.lua
+Modules\UnitFrames\Units\Player.lua
+Modules\UnitFrames\Units\Pet.lua
+Modules\UnitFrames\Units\Target.lua
+Modules\UnitFrames\Units\TargetOfTarget.lua
+Modules\UnitFrames\Units\Boss.lua
+Modules\UnitFrames\Units\Focus.lua
+Modules\UnitFrames\Preview.lua
+
+# Main addon file
+DessertUI.lua
