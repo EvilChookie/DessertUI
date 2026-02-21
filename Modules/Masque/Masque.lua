@@ -261,7 +261,12 @@ end
 -- Initialize
 local function initialize()
     createGroups()
-    registerActionBars()
+
+    -- Bartender4 handles its own action bar Masque skinning
+    if not ns.hasBartender4 then
+        registerActionBars()
+    end
+
     setupAuraHooks()
     setupCooldownViewerHooks()
 end

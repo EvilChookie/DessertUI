@@ -7,6 +7,9 @@ local addon, ns = ...
     Constants are organized by functionality for better maintainability.
 ]]
 
+-- Detect optional dependencies (loaded before us via OptionalDeps in TOC)
+ns.hasBartender4 = C_AddOns.IsAddOnLoaded("Bartender4")
+
 ns.Constants = {
     -- Frame sizing constants for better mouse interaction and text accommodation
     frames = {
@@ -23,30 +26,8 @@ ns.Constants = {
         },
     },
     
-    -- Unit frame names for fader configuration
-    -- combined: frames that use both mouseover and combat faders
-    -- mouseover: frames that only use mouseover fader
-    unitFrameNames = {
-        combined = {"Player", "Target", "Pet", "Target of Target", "Focus"},
-        mouseover = {},
-    },
-
-    -- Fader configurations - consolidated and simplified
-    -- These control how UI elements fade in/out based on mouseover and combat state
+    -- Fader configuration for unit frames (mouseover + combat aware)
     faders = {
-        -- Mouseover-only fader: shows/hides on mouse enter/leave
-        mouseover = {
-            enableMouseover = true,
-            enableCombat = false,
-            fadeInAlpha = 1,
-            fadeOutAlpha = 0,
-            fadeInDuration = 0.15,
-            fadeOutDuration = 0.15,
-            fadeInSmooth = "IN_OUT",
-            fadeOutSmooth = "IN_OUT",
-        },
-        -- Combined fader: handles both mouseover and combat states
-        -- Prioritizes mouseover over combat state
         combined = {
             enableMouseover = true,
             enableCombat = true,
@@ -146,32 +127,9 @@ ns.Constants = {
     options = {
         -- Ordered list to control display order
         order = {
-            "microMenuFader",
-            "bagFader",
             "unitFader",
         },
-        
-        -- Option definitions (same as before)
-        microMenuFader = {
-            name = "Micro Menu Fader",
-            variable = "microMenuFader",
-            variableKey = "microMenuFader",
-            tooltip = "Fade the micro menu until you mouse over it.",
-            defaultValue = true,
-            type = "toggle",
-            realtime = true,
-            callback = "Faders.ToggleMicroMenuFaderSilent",
-        },
-        bagFader = {
-            name = "Bag Fader",
-            variable = "bagFader",
-            variableKey = "bagFader",
-            tooltip = "Fade bags until you mouse over them.",
-            defaultValue = true,
-            type = "toggle",
-            realtime = true,
-            callback = "Faders.ToggleBagFaderSilent",
-        },
+
         unitFader = {
             name = "Unit Fader",
             variable = "unitFader",

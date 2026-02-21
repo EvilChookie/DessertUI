@@ -1,5 +1,8 @@
 local addon, ns = ...
 
+-- Bartender4 handles its own hotkey text formatting
+if ns.hasBartender4 then return end
+
 -- Props to: https://eu.forums.blizzard.com/en/wow/t/action-bar-hotkey-text/180719
 local ACTION_BAR_NAMES = { 'Action', 'MultiBarBottomLeft', 'MultiBarBottomRight', 'MultiBarRight', 'MultiBarLeft' }
 
@@ -42,6 +45,8 @@ local HOTKEY_REPLACEMENTS = {
     { KEY_NUMPAD9, 'N9' },
 }
 
+local ipairs = ipairs
+
 local function applyHotkeyReplacements(originalText)
     local transformedText = originalText
     for _, mapping in ipairs(HOTKEY_REPLACEMENTS) do
@@ -50,28 +55,47 @@ local function applyHotkeyReplacements(originalText)
     return transformedText
 end
 
-function dUI_Fixes_HotkeyTextFix()
+-- Process a single button: shorten hotkey text and hide macro name
+local function processButton(button)
+    if not button then return end
+
+    local hotkeyRegion = button.HotKey
+    local text = hotkeyRegion and hotkeyRegion:GetText()
+    if text and text ~= '' then
+        local newText = applyHotkeyReplacements(text)
+        hotkeyRegion:SetText(newText == RANGE_INDICATOR and '' or newText)
+    end
+
+    local nameRegion = button.Name
+    if nameRegion then
+        nameRegion:SetText('')
+        nameRegion:SetAlpha(0)
+    end
+end
+
+-- Full update: process all action bar buttons (hotkey text + macro names)
+local function updateAllButtons()
+    for _, actionBarName in ipairs(ACTION_BAR_NAMES) do
+        for buttonIndex = 1, 12 do
+            processButton(_G[actionBarName .. 'Button' .. buttonIndex])
+        end
+    end
+end
+
+-- Light update: only hide macro names on all buttons (slot content changed, not bindings)
+local function hideMacroNames()
     for _, actionBarName in ipairs(ACTION_BAR_NAMES) do
         for buttonIndex = 1, 12 do
             local button = _G[actionBarName .. 'Button' .. buttonIndex]
-            local hotkeyRegion = button and button.HotKey
-            local text = hotkeyRegion and hotkeyRegion:GetText()
-            if text and text ~= '' then
-                local newText = applyHotkeyReplacements(text)
-                hotkeyRegion:SetText(newText == RANGE_INDICATOR and '' or newText)
-            end
-
-            -- Hide macro name
-            local nameRegion = button and button.Name
-            if nameRegion then
-                nameRegion:SetText('')
-                nameRegion:SetAlpha(0)
+            if button and button.Name then
+                button.Name:SetText('')
+                button.Name:SetAlpha(0)
             end
         end
     end
 end
 
-ns.Utils.RegisterCallback("PLAYER_LOGIN", dUI_Fixes_HotkeyTextFix)
-ns.Utils.RegisterCallback("UPDATE_BINDINGS", dUI_Fixes_HotkeyTextFix)
-ns.Utils.RegisterCallback("UPDATE_MACROS", dUI_Fixes_HotkeyTextFix)
-ns.Utils.RegisterCallback("ACTIONBAR_SLOT_CHANGED", dUI_Fixes_HotkeyTextFix)
+ns.Utils.RegisterCallback("PLAYER_LOGIN", updateAllButtons)
+ns.Utils.RegisterCallback("UPDATE_BINDINGS", updateAllButtons)
+ns.Utils.RegisterCallback("UPDATE_MACROS", hideMacroNames)
+ns.Utils.RegisterCallback("ACTIONBAR_SLOT_CHANGED", hideMacroNames)

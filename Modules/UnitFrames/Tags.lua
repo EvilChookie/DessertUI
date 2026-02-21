@@ -10,10 +10,13 @@ if not oUF then
     return
 end
 
+-- Cache frequently used functions
+local string_format = string.format
+
 -- Cache CurveConstants with fallback for safety
 local SCALE_TO_100 = CurveConstants and CurveConstants.ScaleTo100 or nil
 
-oUF.Tags.Events["dUI_Name"] = "UNIT_HEALTH UNIT_CLASSIFICATION_CHANGED UNIT_CONNECTION UNIT_FACTION"
+oUF.Tags.Events["dUI_Name"] = "UNIT_HEALTH UNIT_CLASSIFICATION_CHANGED UNIT_CONNECTION UNIT_FACTION UNIT_NAME_UPDATE"
 oUF.Tags.Methods["dUI_Name"] = function(u)
 	local _, class = UnitClass(u)
     local reaction = UnitReaction(u, "player")
@@ -38,7 +41,7 @@ oUF.Tags.Methods["dUI_Name"] = function(u)
 	else
 		color = Utils.Hex(1, 1, 1)
     end
-    
+
     return (color .. name .."|r")
 end
 
@@ -70,7 +73,7 @@ oUF.Tags.Methods["dUI_HP"] = function(u)
     -- Use UnitHealthPercent to handle secret health values
     -- Using white color for now to avoid arithmetic on secret values
     local healthPercentage = UnitHealthPercent(u, true, SCALE_TO_100)
-    return string.format("|cffffffff%.0f%%|r", healthPercentage)
+    return string_format("|cffffffff%.0f%%|r", healthPercentage)
 end
 
 -- Health percentage with class color (for player)
@@ -87,7 +90,7 @@ oUF.Tags.Methods["dUI_HP_Class"] = function(u)
         color = Utils.Hex(oUF.colors.class[class])
     end
 
-    return string.format("%s%.0f%%|r", color, healthPercentage)
+    return string_format("%s%.0f%%|r", color, healthPercentage)
 end
 
 -- Short health value using ShortNumber function
@@ -102,16 +105,16 @@ oUF.Tags.Events["dUI_ShortHPFull"] = 'UNIT_HEALTH UNIT_MAXHEALTH UNIT_CLASSIFICA
 oUF.Tags.Methods["dUI_ShortHPFull"] = function(u)
     local health = UnitHealth(u)
     local maxHealth = UnitHealthMax(u)
-    return string.format("%s/%s", Utils.ShortNumber(health), Utils.ShortNumber(maxHealth))
+    return string_format("%s/%s", Utils.ShortNumber(health), Utils.ShortNumber(maxHealth))
 end
 
 -- Combined tag: Health percentage and name in one string
 -- This avoids needing to calculate string widths on secret values
-oUF.Tags.Events["dUI_HPAndName"] = 'UNIT_HEALTH UNIT_MAXHEALTH UNIT_CLASSIFICATION_CHANGED UNIT_CONNECTION UNIT_FACTION'
+oUF.Tags.Events["dUI_HPAndName"] = 'UNIT_HEALTH UNIT_MAXHEALTH UNIT_CLASSIFICATION_CHANGED UNIT_CONNECTION UNIT_FACTION UNIT_NAME_UPDATE'
 oUF.Tags.Methods["dUI_HPAndName"] = function(u)
     -- Get health percentage (white color)
     local healthPercentage = UnitHealthPercent(u, true, SCALE_TO_100)
-    local healthText = string.format("|cffffffff%.0f%%|r", healthPercentage)
+    local healthText = string_format("|cffffffff%.0f%%|r", healthPercentage)
 
     -- Get colored name
     local _, class = UnitClass(u)

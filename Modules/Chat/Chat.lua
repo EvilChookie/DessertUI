@@ -14,8 +14,10 @@ ns.Chat = Chat
 -- Cache frequently used functions
 local pairs = pairs
 local ipairs = ipairs
-local type = type
 local string_match = string.match
+
+-- Track which chat frames have had the full cleanup pass
+local cleaned = {}
 
 -- Buttons to hide
 local HIDDEN_BUTTONS = {
@@ -42,17 +44,69 @@ local function hideButtons()
     end
 end
 
--- Remove background and border from a single chat frame
-local function cleanupChatFrame(chatFrame, index)
+-- Lightweight re-hide: only touches known named sub-elements (no iteration)
+local function reHideChatFrame(chatFrame)
     if not chatFrame then return end
 
     local frameName = chatFrame:GetName()
 
-    -- Hide the background texture
+    local bg = _G[frameName .. "Background"]
+    if bg then
+        bg:SetAlpha(0)
+    end
+
+    local tab = _G[frameName .. "Tab"]
+    if tab then
+        if tab.Left then tab.Left:SetAlpha(0) end
+        if tab.Middle then tab.Middle:SetAlpha(0) end
+        if tab.Right then tab.Right:SetAlpha(0) end
+        if tab.ActiveLeft then tab.ActiveLeft:SetAlpha(0) end
+        if tab.ActiveMiddle then tab.ActiveMiddle:SetAlpha(0) end
+        if tab.ActiveRight then tab.ActiveRight:SetAlpha(0) end
+        if tab.HighlightLeft then tab.HighlightLeft:SetAlpha(0) end
+        if tab.HighlightMiddle then tab.HighlightMiddle:SetAlpha(0) end
+        if tab.HighlightRight then tab.HighlightRight:SetAlpha(0) end
+    end
+
+    local buttonFrame = _G[frameName .. "ButtonFrame"]
+    if buttonFrame then
+        buttonFrame:Hide()
+        buttonFrame:SetAlpha(0)
+    end
+
+    local editBox = _G[frameName .. "EditBox"]
+    if editBox then
+        if editBox.Left then editBox.Left:SetAlpha(0) end
+        if editBox.Mid then editBox.Mid:SetAlpha(0) end
+        if editBox.Right then editBox.Right:SetAlpha(0) end
+        if editBox.FocusLeft then editBox.FocusLeft:SetAlpha(0) end
+        if editBox.FocusMid then editBox.FocusMid:SetAlpha(0) end
+        if editBox.FocusRight then editBox.FocusRight:SetAlpha(0) end
+    end
+
+    if chatFrame.Background then
+        chatFrame.Background:Hide()
+        chatFrame.Background:SetAlpha(0)
+    end
+
+    if chatFrame.SetBackdrop then
+        chatFrame:SetBackdrop(nil)
+    end
+end
+
+-- Full cleanup: does expensive region/child iteration once, then marks as cleaned
+local function cleanupChatFrame(chatFrame)
+    if not chatFrame then return end
+
+    -- Lightweight pass (covers all known named elements)
+    reHideChatFrame(chatFrame)
+
+    local frameName = chatFrame:GetName()
+
+    -- Hide the background texture (SetTexture only needed on first pass)
     local bg = _G[frameName .. "Background"]
     if bg then
         bg:Hide()
-        bg:SetAlpha(0)
         bg:SetTexture(nil)
     end
 
@@ -71,42 +125,16 @@ local function cleanupChatFrame(chatFrame, index)
         end
     end
 
-    -- Remove tab textures and backgrounds
-    local tab = _G[frameName .. "Tab"]
-    if tab then
-        if tab.Left then tab.Left:SetAlpha(0) end
-        if tab.Middle then tab.Middle:SetAlpha(0) end
-        if tab.Right then tab.Right:SetAlpha(0) end
-        if tab.ActiveLeft then tab.ActiveLeft:SetAlpha(0) end
-        if tab.ActiveMiddle then tab.ActiveMiddle:SetAlpha(0) end
-        if tab.ActiveRight then tab.ActiveRight:SetAlpha(0) end
-        if tab.HighlightLeft then tab.HighlightLeft:SetAlpha(0) end
-        if tab.HighlightMiddle then tab.HighlightMiddle:SetAlpha(0) end
-        if tab.HighlightRight then tab.HighlightRight:SetAlpha(0) end
-    end
-
     -- Set chat frame to have no background
     chatFrame:SetClampRectInsets(0, 0, 0, 0)
 
-    -- Hide the button frame (resize grip area)
-    local buttonFrame = _G[frameName .. "ButtonFrame"]
-    if buttonFrame then
-        buttonFrame:Hide()
-        buttonFrame:SetAlpha(0)
+    -- Also check the scroll frame if it exists
+    local scrollFrame = chatFrame.ScrollBar or _G[frameName .. "ScrollBar"]
+    if scrollFrame then
+        scrollFrame:SetAlpha(0)
     end
 
-    -- Hide edit box backgrounds
-    local editBox = _G[frameName .. "EditBox"]
-    if editBox then
-        if editBox.Left then editBox.Left:SetAlpha(0) end
-        if editBox.Mid then editBox.Mid:SetAlpha(0) end
-        if editBox.Right then editBox.Right:SetAlpha(0) end
-        if editBox.FocusLeft then editBox.FocusLeft:SetAlpha(0) end
-        if editBox.FocusMid then editBox.FocusMid:SetAlpha(0) end
-        if editBox.FocusRight then editBox.FocusRight:SetAlpha(0) end
-    end
-
-    -- Kill all regions on the chat frame that might be borders/backgrounds
+    -- Expensive iteration: kill all region textures matching Background/Border/Texture
     local regions = {chatFrame:GetRegions()}
     for _, region in pairs(regions) do
         if region and region:GetObjectType() == "Texture" then
@@ -118,24 +146,7 @@ local function cleanupChatFrame(chatFrame, index)
         end
     end
 
-    -- Also check the scroll frame if it exists
-    local scrollFrame = chatFrame.ScrollBar or _G[frameName .. "ScrollBar"]
-    if scrollFrame then
-        scrollFrame:SetAlpha(0)
-    end
-
-    -- Remove backdrop if the frame has one
-    if chatFrame.SetBackdrop then
-        chatFrame:SetBackdrop(nil)
-    end
-
-    -- Check for Background child frame
-    if chatFrame.Background then
-        chatFrame.Background:Hide()
-        chatFrame.Background:SetAlpha(0)
-    end
-
-    -- Check for border frames that might be children
+    -- Expensive iteration: check for border/background child frames
     for _, child in pairs({chatFrame:GetChildren()}) do
         local childName = child:GetName() or ""
         if childName:match("Background") or childName:match("Border") or childName:match("Frame") then
@@ -145,6 +156,19 @@ local function cleanupChatFrame(chatFrame, index)
             end
         end
     end
+
+    cleaned[chatFrame] = true
+end
+
+-- Smart cleanup: full pass on first call, lightweight on subsequent calls
+local function ensureChatFrameClean(chatFrame)
+    if not chatFrame then return end
+
+    if cleaned[chatFrame] then
+        reHideChatFrame(chatFrame)
+    else
+        cleanupChatFrame(chatFrame)
+    end
 end
 
 -- Remove chat frame backgrounds and borders for all chat frames
@@ -152,56 +176,54 @@ local function removeChatBackgrounds()
     -- Process all chat frames (NUM_CHAT_WINDOWS is typically 10)
     for i = 1, NUM_CHAT_WINDOWS do
         local chatFrame = _G["ChatFrame" .. i]
-        cleanupChatFrame(chatFrame, i)
+        cleanupChatFrame(chatFrame)
     end
 
     -- Also handle any temporary chat frames that might be created later
     hooksecurefunc("FCF_OpenTemporaryWindow", function()
         for i = 1, NUM_CHAT_WINDOWS do
-            local chatFrame = _G["ChatFrame" .. i]
-            cleanupChatFrame(chatFrame, i)
+            ensureChatFrameClean(_G["ChatFrame" .. i])
         end
     end)
 
     -- Hook functions that show borders/backgrounds on interaction
     hooksecurefunc("FCF_FadeInChatFrame", function(chatFrame)
-        cleanupChatFrame(chatFrame)
+        ensureChatFrameClean(chatFrame)
     end)
 
     hooksecurefunc("FCF_FadeOutChatFrame", function(chatFrame)
-        cleanupChatFrame(chatFrame)
+        ensureChatFrameClean(chatFrame)
     end)
 
     -- Hook the tab click to re-hide backgrounds
     hooksecurefunc("FCF_Tab_OnClick", function(self)
-        local chatFrame = _G["ChatFrame" .. self:GetID()]
-        cleanupChatFrame(chatFrame)
+        ensureChatFrameClean(_G["ChatFrame" .. self:GetID()])
     end)
 
     -- Hook SetWindowAlpha which is called during interactions
     if FCF_SetWindowAlpha then
         hooksecurefunc("FCF_SetWindowAlpha", function(chatFrame)
-            cleanupChatFrame(chatFrame)
+            ensureChatFrameClean(chatFrame)
         end)
     end
 
     -- Hook the scroll function
     if FloatingChatFrame_OnMouseScroll then
         hooksecurefunc("FloatingChatFrame_OnMouseScroll", function(chatFrame)
-            cleanupChatFrame(chatFrame)
+            ensureChatFrameClean(chatFrame)
         end)
     end
 
     -- Hook background color functions
     if FCF_SetWindowColor then
         hooksecurefunc("FCF_SetWindowColor", function(chatFrame)
-            cleanupChatFrame(chatFrame)
+            ensureChatFrameClean(chatFrame)
         end)
     end
 
     if FCF_SetWindowBackgroundColor then
         hooksecurefunc("FCF_SetWindowBackgroundColor", function(chatFrame)
-            cleanupChatFrame(chatFrame)
+            ensureChatFrameClean(chatFrame)
         end)
     end
 end

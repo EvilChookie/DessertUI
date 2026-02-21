@@ -9,6 +9,14 @@ local addon, ns = ...
 
 ns.Fader = ns.Fader or {}
 local Fader = ns.Fader
+
+-- Cached combat state (updated on PLAYER_REGEN_ENABLED/DISABLED only)
+local inCombat = false
+
+-- Frame registries for shared ticker and combat events
+local mouseoverFrames = {} -- set of frames needing OnUpdate polling
+local combatFrames = {}    -- set of frames needing combat state updates
+
 local function FaderOnFinished(self)
     self.__owner:SetAlpha(self.finAlpha)
 end
@@ -26,25 +34,30 @@ end
 local function GetTargetAlpha(frame, fadeType)
     local config = frame.__faderConfig
     if not config then return 1 end
-    
+
     if fadeType == "mouseover" then
         return config.fadeInAlpha or 1
     elseif fadeType == "mouseout" then
         return config.fadeOutAlpha or 0.2
     elseif fadeType == "combat" then
-        local inCombat = UnitAffectingCombat("player")
         return inCombat and (config.inCombatAlpha or 1) or (config.outCombatAlpha or 0.2)
     end
-    
+
     return 1
 end
 
 local function StartFade(frame, fadeType)
     if not frame.__fader or not frame.__faderConfig then return end
-    
+
     local targetAlpha = GetTargetAlpha(frame, fadeType)
+
+    -- Early-out: skip if already at target alpha and not animating
+    if frame:GetAlpha() == targetAlpha and not frame.__fader:IsPlaying() then
+        return
+    end
+
     local config = frame.__faderConfig
-    
+
     -- Determine which configuration to use based on fade type
     local duration, smoothing, delay
     if fadeType == "mouseover" then
@@ -56,12 +69,11 @@ local function StartFade(frame, fadeType)
         smoothing = config.fadeOutSmooth or "OUT"
         delay = config.fadeOutDelay or 0
     elseif fadeType == "combat" then
-        local inCombat = UnitAffectingCombat("player")
         duration = inCombat and (config.inCombatDuration or 0.15) or (config.outCombatDuration or 0.15)
         smoothing = inCombat and (config.inCombatSmooth or "OUT") or (config.outCombatSmooth or "OUT")
         delay = inCombat and (config.inCombatDelay or 0) or (config.outCombatDelay or 0)
     end
-    
+
     frame.__fader:Pause()
     frame.__fader.anim:SetFromAlpha(frame:GetAlpha())
     frame.__fader.anim:SetToAlpha(targetAlpha)
@@ -100,10 +112,9 @@ end
 
 local function FrameHandler(frame)
     if not frame.__faderConfig or frame.__faderDisabled then return end
-    
+
     local isMouseOver = IsMouseOverFrame(frame)
-    local inCombat = UnitAffectingCombat("player")
-    
+
     -- Determine fade type based on current state
     local fadeType
     if frame.__faderConfig.enableCombat and frame.__faderConfig.enableMouseover then
@@ -120,7 +131,7 @@ local function FrameHandler(frame)
     else
         return
     end
-    
+
     StartFade(frame, fadeType)
 end
 
@@ -133,7 +144,7 @@ end
 
 local function LABFlyoutHandlerFrameOnShow(frame)
     if not frame or not frame.buttons then return end
-    
+
     for i = 1, #frame.buttons do
         local button = frame.buttons[i]
         if not button then break end
@@ -157,7 +168,7 @@ local function ApplyFaderDefaults(faderConfig)
     faderConfig.fadeOutSmooth = faderConfig.fadeOutSmooth or "OUT"
     faderConfig.fadeInDelay = faderConfig.fadeInDelay or 0
     faderConfig.fadeOutDelay = faderConfig.fadeOutDelay or 0
-    
+
     -- Combat defaults (if combat fader is enabled)
     if faderConfig.enableCombat then
         faderConfig.inCombatAlpha = faderConfig.inCombatAlpha or 1
@@ -169,41 +180,63 @@ local function ApplyFaderDefaults(faderConfig)
         faderConfig.inCombatDelay = faderConfig.inCombatDelay or 0
         faderConfig.outCombatDelay = faderConfig.outCombatDelay or 0
     end
-    
+
     return faderConfig
 end
 
+-- Shared OnUpdate ticker for all mouseover-faded frames
+local tickerFrame = CreateFrame("Frame")
+tickerFrame.elapsed = 0
+tickerFrame:SetScript("OnUpdate", function(self, elapsed)
+    self.elapsed = self.elapsed + elapsed
+    if self.elapsed < 0.12 then return end
+    self.elapsed = 0
+
+    for frame in next, mouseoverFrames do
+        if frame:IsVisible() and not frame.__faderDisabled then
+            FrameHandler(frame)
+        end
+    end
+end)
+
+-- Shared combat event frame for all combat-faded frames
+local combatEventFrame = CreateFrame("Frame")
+combatEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+combatEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+combatEventFrame:SetScript("OnEvent", function(self, event)
+    inCombat = (event == "PLAYER_REGEN_DISABLED")
+
+    for frame in next, combatFrames do
+        if not frame.__faderDisabled then
+            FrameHandler(frame)
+        end
+    end
+end)
+
 -- Helper function to setup mouseover fader functionality
 local function SetupMouseoverFader(frame, faderConfig)
-    frame:EnableMouse(true)
-    frame:HookScript("OnEnter", FrameHandler)
-    frame:HookScript("OnLeave", FrameHandler)
-    
-    -- Poll occasionally to handle edge cases where OnEnter/OnLeave don't fire
-    frame.__faderElapsed = 0
-    frame:HookScript("OnUpdate", function(self, elapsed)
-        self.__faderElapsed = (self.__faderElapsed or 0) + (elapsed or 0)
-        -- Poll every ~120ms (0.12 seconds) to catch edge cases
-        if self.__faderElapsed > 0.12 then
-            self.__faderElapsed = 0
-            FrameHandler(self)
-        end
-    end)
+    -- Only enable mouse if not explicitly skipped (for frames where EnableMouse interferes with other systems)
+    if not faderConfig.skipEnableMouse then
+        frame:EnableMouse(true)
+    end
+
+    -- Only hook OnEnter/OnLeave if not explicitly skipped (for frames where these hooks interfere with edit mode)
+    if not faderConfig.skipMouseoverHooks then
+        frame:HookScript("OnEnter", FrameHandler)
+        frame:HookScript("OnLeave", FrameHandler)
+    end
+
+    -- Register with shared ticker for edge-case polling
+    mouseoverFrames[frame] = true
+
     FrameHandler(frame)
 end
 
 -- Helper function to setup combat fader functionality
-local function SetupCombatFader(frame, faderConfig)
-    local eventFrame = CreateFrame("Frame", nil, frame)
-    frame.__combatFaderEventFrame = eventFrame
-    
-    eventFrame:SetScript("OnEvent", function(self, event)
-        FrameHandler(frame)
-    end)
-    
-    eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-    eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
-    
+local function SetupCombatFader(frame)
+    -- Register with shared combat event handler
+    combatFrames[frame] = true
+
     -- Set initial state (consider both combat and mouseover)
     FrameHandler(frame)
 end
@@ -211,37 +244,37 @@ end
 -- Unified fader creation function
 Fader.Create = function(frame, faderConfig)
     if frame.__faderInitialized then return end
-    
+
     -- Apply default values and store configuration
     faderConfig = ApplyFaderDefaults(faderConfig)
     frame.__faderConfig = faderConfig
     CreateFaderAnimation(frame)
-    
+
     -- Setup mouseover fader if requested
     if faderConfig.enableMouseover then
         SetupMouseoverFader(frame, faderConfig)
     end
-    
+
     -- Setup combat fader if requested
     if faderConfig.enableCombat then
-        SetupCombatFader(frame, faderConfig)
+        SetupCombatFader(frame)
     end
-    
+
     frame.__faderInitialized = true
 end
 
 -- Function to disable fader on a frame and reset to full opacity
 Fader.Disable = function(frame)
     if not frame or not frame.__faderInitialized then return end
-    
+
     -- Stop any running animation
     if frame.__fader then
         frame.__fader:Stop()
     end
-    
+
     -- Set disabled flag so fader handlers will ignore events
     frame.__faderDisabled = true
-    
+
     -- Reset to full opacity
     frame:SetAlpha(1)
 end
@@ -249,10 +282,10 @@ end
 -- Function to re-enable a disabled fader
 Fader.Enable = function(frame)
     if not frame or not frame.__faderInitialized then return end
-    
+
     -- Clear disabled flag
     frame.__faderDisabled = nil
-    
+
     -- Trigger initial state based on current conditions using FrameHandler
     if frame.__faderConfig then
         FrameHandler(frame)

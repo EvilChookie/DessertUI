@@ -1,4 +1,4 @@
-## Interface: 120000
+## Interface: 120001
 ## Title: |cffffffffDessert|cffdc143cUI|r
 ## Notes: A Tasty UI for World of Warcraft
 ## Author: Xervish@Nagrand-US
@@ -6,7 +6,7 @@
 ## SavedVariables: DessertUIDB
 ## X-oUF: DessertUI
 ## IconTexture: 237362
-## OptionalDeps: Masque
+## OptionalDeps: Masque, Bartender4
 
 # Unit Frames
 ## Category: Unit Frames
