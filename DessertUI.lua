@@ -6,6 +6,15 @@ local function InitializeUnitFrames()
     end
 end
 
+local function InitializeCooldownManager()
+    if ns.Resources then
+        ns.Resources.Initialize()
+    end
+    if ns.CastBar then
+        ns.CastBar.Initialize()
+    end
+end
+
 local function Welcome()
     ns.Utils.PrintMessage("Welcome to DessertUI!")
 end
@@ -18,5 +27,6 @@ end
 
 -- Register Callbacks:
 ns.Utils.RegisterCallback("PLAYER_ENTERING_WORLD", InitializeUnitFrames)
+ns.Utils.RegisterCallback("PLAYER_ENTERING_WORLD", InitializeCooldownManager)
 ns.Utils.RegisterCallback("PLAYER_LOGIN", Welcome)
 ns.Utils.RegisterCallback("PLAYER_ENTERING_WORLD", InitializeSlashCommands)

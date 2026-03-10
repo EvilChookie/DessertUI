@@ -93,6 +93,7 @@ oUF.Tags.Methods["dUI_HP_Class"] = function(u)
     return string_format("%s%.0f%%|r", color, healthPercentage)
 end
 
+
 -- Short health value using ShortNumber function
 oUF.Tags.Events["dUI_ShortHP"] = 'UNIT_HEALTH UNIT_MAXHEALTH UNIT_CLASSIFICATION_CHANGED'
 oUF.Tags.Methods["dUI_ShortHP"] = function(u)

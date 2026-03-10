@@ -36,6 +36,11 @@ local function ApplyPosition(frame, positionKey)
     end
     
     frame:SetPoint(pos.point, relativeFrame, pos.relative, pos.x, pos.y)
+
+    -- Snap to pixel grid after positioning
+    if ns.PixelPerfect then
+        ns.PixelPerfect.Snap(frame)
+    end
 end
 
 -- Base style function for generic units

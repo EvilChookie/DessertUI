@@ -17,9 +17,9 @@ local function PlayerStyle(self, unit)
     self.HealthPercent:SetPoint("TOPRIGHT", self, "TOPRIGHT", 0, 0)
     self.HealthPercent:SetJustifyH("RIGHT")
     
-    -- Register health tags
+    -- Register health tag
     self:Tag(self.HealthPercent, "[dUI_HP_Class]")
-    
+
     -- Force update tags to populate text immediately
     if self.UpdateTags then
         self:UpdateTags()

@@ -6,7 +6,6 @@ local addon, ns = ...
     Provides Masque skinning support for Blizzard UI elements:
     - Action Bars
     - Buffs and Debuffs
-    - Cooldown Manager (Essential, Utility, Tracked Bars/Buffs)
 
     If Masque is not installed, this module silently does nothing.
 
@@ -23,7 +22,6 @@ local addon, ns = ...
 
     MasqueBlizzBars by SimGuy (MIT License, 2022-2024)
     https://github.com/SimGuy2014/MasqueBlizzBars
-    - Cooldown viewer skinning approach via RefreshLayout hooks
     - Action bar region mapping patterns
 
     ============================================================================
@@ -56,23 +54,12 @@ local ACTION_BARS = {
     { prefix = "OverrideActionBarButton", count = 6 },
 }
 
--- Cooldown viewer configurations
--- Note: BuffBarCooldownViewer excluded - it doesn't expose GetItemIconFrames method
-local COOLDOWN_VIEWERS = {
-    { frame = "EssentialCooldownViewer", group = "essentialCooldowns", method = "GetItemFrames", buttonType = "Action" },
-    { frame = "UtilityCooldownViewer", group = "utilityCooldowns", method = "GetItemFrames", buttonType = "Action" },
-    { frame = "BuffIconCooldownViewer", group = "trackedBuffs", method = "GetItemFrames", buttonType = "Aura" },
-}
-
 local function createGroups()
     groups.actionBars = Masque:Group(addon, "Action Bars")
     groups.stanceBar = Masque:Group(addon, "Stance Bar")
     groups.petBar = Masque:Group(addon, "Pet Action Bar")
     groups.buffs = Masque:Group(addon, "Buffs")
     groups.debuffs = Masque:Group(addon, "Debuffs")
-    groups.essentialCooldowns = Masque:Group(addon, "Essential Cooldowns")
-    groups.utilityCooldowns = Masque:Group(addon, "Utility Cooldowns")
-    groups.trackedBuffs = Masque:Group(addon, "Tracked Buffs")
 end
 
 --[[
@@ -208,56 +195,6 @@ local function setupAuraHooks()
     end
 end
 
---[[
-    Cooldown Viewer Skinning
-]]
-
-local function getTexture(obj)
-    if not obj then return nil end
-    local obj_type = obj.GetObjectType and obj:GetObjectType()
-    if obj_type == "Texture" then
-        return obj
-    elseif obj_type == "Frame" and obj.Texture then
-        return obj.Texture
-    end
-    return nil
-end
-
-local function makeCooldownViewerHook(config)
-    local group = groups[config.group]
-    local method_name = config.method
-    local button_type = config.buttonType
-
-    return function(self)
-        local method = self[method_name]
-        if not method then return end
-
-        local frames = method(self)
-        if not frames then return end
-
-        for _, button in ipairs(frames) do
-            if not skinned[button] then
-                group:AddButton(button, {
-                    Icon = button.Icon,
-                    Cooldown = button.Cooldown,
-                    Count = button.Count,
-                    DebuffBorder = getTexture(button.DebuffBorder),
-                }, button_type)
-                skinned[button] = true
-            end
-        end
-    end
-end
-
-local function setupCooldownViewerHooks()
-    for _, config in ipairs(COOLDOWN_VIEWERS) do
-        local frame = _G[config.frame]
-        if frame and frame.RefreshLayout then
-            hooksecurefunc(frame, "RefreshLayout", makeCooldownViewerHook(config))
-        end
-    end
-end
-
 -- Initialize
 local function initialize()
     createGroups()
@@ -268,7 +205,6 @@ local function initialize()
     end
 
     setupAuraHooks()
-    setupCooldownViewerHooks()
 end
 
 ns.Utils.RegisterCallback("PLAYER_LOGIN", initialize)

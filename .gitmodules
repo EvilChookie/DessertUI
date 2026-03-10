@@ -7,3 +7,6 @@
 [submodule "Libs/LibStub"]
 	path = Libs/LibStub
 	url = https://github.com/lua-wow/LibStub.git
+[submodule "Libs/LibEditModeOverride"]
+	path = Libs/LibEditModeOverride
+	url = https://github.com/plusmouse/LibEditModeOverride.git

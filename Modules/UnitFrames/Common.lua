@@ -61,6 +61,11 @@ UnitFrames.Common.CreateWidthAdjuster = function(self, nameElement, minWidth, pa
         if self.Background then
             self.Background:SetAllPoints()
         end
+
+        -- Re-snap to pixel grid after width change
+        if ns.PixelPerfect then
+            ns.PixelPerfect.Snap(self)
+        end
     end
 end
 

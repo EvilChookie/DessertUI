@@ -37,13 +37,22 @@
 # Libraries
 Libs\LibStub\LibStub.lua
 Libs\LibDispel\LibDispel.xml
+Libs\LibEditModeOverride\LibEditModeOverride.xml
 Libs\oUF\oUF.xml
 
 Modules\Core\Constants.lua
 Modules\Core\Slash.lua
 Modules\Core\Utils.lua
+Modules\Core\PixelPerfect.lua
 Modules\Core\Fader.lua
 Modules\Core\Settings.lua
+
+# Cooldown Manager (standalone cast bar + resources)
+Modules\CooldownManager\Resources.lua
+Modules\CooldownManager\CastBar.lua
+
+# Layout
+Modules\Layout\Layout.lua
 
 # Smaller Modules
 Modules\Faders\Faders.lua

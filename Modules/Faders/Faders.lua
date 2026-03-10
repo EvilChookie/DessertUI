@@ -77,3 +77,22 @@ end
 function Faders.ToggleUnitFaderSilent(enabled)
     return Faders.ToggleUnitFader(enabled, true)
 end
+
+-- Mouseover-only faders for irrelevant UI frames (bag bar, micro menu)
+local irrelevantFrames = {}
+
+local function initIrrelevantFaders()
+    local frames_to_fade = {
+        BagsBar,
+        MicroMenu,
+    }
+
+    for _, frame in pairs(frames_to_fade) do
+        if frame and not frame.__faderInitialized then
+            ns.Fader.Create(frame, ns.Constants.faders.mouseoverOnly)
+            irrelevantFrames[#irrelevantFrames + 1] = frame
+        end
+    end
+end
+
+ns.Utils.RegisterCallback("PLAYER_ENTERING_WORLD", initIrrelevantFaders)
