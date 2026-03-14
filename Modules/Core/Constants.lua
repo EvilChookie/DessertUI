@@ -54,6 +54,23 @@ ns.Constants = {
             fadeOutSmooth = "IN_OUT",
             fadeOutDelay = 0.5,
         },
+        actionBars = {
+            enableMouseover = true,
+            enableCombat = true,
+            fadeInAlpha = 1,
+            fadeOutAlpha = 0.2,
+            fadeInDuration = 0.15,
+            fadeOutDuration = 0.3,
+            fadeInSmooth = "IN_OUT",
+            fadeOutSmooth = "IN_OUT",
+            inCombatAlpha = 0,
+            outCombatAlpha = 1,
+            inCombatDuration = 0.15,
+            outCombatDuration = 0.3,
+            inCombatSmooth = "IN_OUT",
+            outCombatSmooth = "IN_OUT",
+            skipEnableMouse = true,
+        },
     },
 
     -- Font definitions for consistent typography across the UI
@@ -61,6 +78,7 @@ ns.Constants = {
         rajdhaniBold = "Interface\\AddOns\\" .. tostring(addon) .. "\\Fonts\\Rajdhani.ttf",
         atkinsonHyperlegible = "Interface\\AddOns\\" .. tostring(addon) .. "\\Fonts\\AtkinsonHyperlegible.ttf",
         arialNarrow  = "Fonts\\ARIALN.ttf",
+        pixelifySans = "Interface\\AddOns\\" .. tostring(addon) .. "\\Fonts\\PixelifySans.ttf",
     },
 
     fontSizes = {
@@ -198,6 +216,17 @@ ns.Constants = {
         -- Populated after constants table is complete (see below)
     },
 
+    -- Mirror Bar: thin status bar for breath, fatigue, feign death, etc.
+    -- Anchored to the player frame's right edge, just below it
+    mirrorBar = {
+        barHeight = 2,
+        barWidth = 110,         -- matches player frame width
+        textOffset = 2,         -- gap between text and bar
+        spacing = 2,            -- vertical gap between stacked bars
+        holdTime = 1.0,         -- seconds to hold bar after timer expires
+        background = { 0.15, 0.17, 0.2, 0.95 },
+    },
+
     -- Unit classification labels for target frames
     classifications = {
         worldboss = "WORLD BOSS",
@@ -214,10 +243,12 @@ ns.Constants = {
         order = {
             "useDessertUILayout",
             "unitFader",
+            "actionBarFader",
             "showCastBar",
             "showPrimaryPower",
             "showSecondaryPower",
             "resourceFader",
+            "showMirrorBar",
         },
 
         useDessertUILayout = {
@@ -275,6 +306,17 @@ ns.Constants = {
             callback = "Resources.ToggleFader",
         },
 
+        showMirrorBar = {
+            name = "Mirror Bar",
+            variable = "showMirrorBar",
+            variableKey = "showMirrorBar",
+            tooltip = "Show mirror timer bars (breath, fatigue, feign death) below the player frame.",
+            defaultValue = true,
+            type = "toggle",
+            realtime = true,
+            callback = "MirrorBar.Toggle",
+        },
+
         unitFader = {
             name = "Unit Fader",
             variable = "unitFader",
@@ -284,6 +326,17 @@ ns.Constants = {
             type = "toggle",
             realtime = true,
             callback = "Faders.ToggleUnitFaderSilent",
+        },
+
+        actionBarFader = {
+            name = "Action Bar Fader",
+            variable = "actionBarFader",
+            variableKey = "actionBarFader",
+            tooltip = "Fade action bars out of combat. Mouseover reveals them.",
+            defaultValue = true,
+            type = "toggle",
+            realtime = true,
+            callback = "Faders.ToggleActionBarFaderSilent",
         },
     },
 }

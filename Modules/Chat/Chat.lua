@@ -207,13 +207,6 @@ local function removeChatBackgrounds()
         end)
     end
 
-    -- Hook the scroll function
-    if FloatingChatFrame_OnMouseScroll then
-        hooksecurefunc("FloatingChatFrame_OnMouseScroll", function(chatFrame)
-            ensureChatFrameClean(chatFrame)
-        end)
-    end
-
     -- Hook background color functions
     if FCF_SetWindowColor then
         hooksecurefunc("FCF_SetWindowColor", function(chatFrame)

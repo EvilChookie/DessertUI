@@ -21,11 +21,6 @@ Utils.Hex = function(r, g, b)
 	end
 end
 
-Utils.ShortNumber = function(number)
-    -- Use WoW's built-in function to handle secret values
-    return AbbreviateLargeNumbers(number)
-end
-
 Utils.SetUnitDefaults = function(self)
     self:RegisterForClicks("AnyDown")
     self:SetScript("OnEnter", UnitFrame_OnEnter)

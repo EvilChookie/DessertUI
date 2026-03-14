@@ -33,10 +33,21 @@ local secondaryPips = {}
 local currentSpecID = 0
 local currentPowerType = 0
 local currentSecondary = nil
+local previousPipValues = {}
 local eventFrame
 
 -- Maelstrom Weapon spell ID for Enhancement Shaman aura tracking
 local MAELSTROM_WEAPON_SPELL_ID = 344179
+
+-- Reusable rune data table and sort comparator (avoids per-tick allocation)
+local runeData = {}
+for i = 1, 6 do
+    runeData[i] = { index = 0, ready = false, remaining = 0, start = 0, duration = 0 }
+end
+local function runeSort(a, b)
+    if a.ready ~= b.ready then return a.ready end
+    return a.remaining < b.remaining
+end
 
 -- Constants shorthand (populated on init)
 local C
@@ -61,6 +72,37 @@ local function getSecondaryColor(key)
     local colors = C.secondaryColors[key]
     if colors then return colors[1], colors[2], colors[3] end
     return 1, 1, 1
+end
+
+-- Play gain animation when a pip transitions from empty to filled
+local function playPipGainIfNew(pip, index, filled)
+    if filled == 1 and (previousPipValues[index] or 0) == 0 then
+        pip.gainAnim:Stop()
+        pip.gainAnim:Play()
+    end
+    previousPipValues[index] = filled
+end
+
+-- Shared fader configuration for resource frames
+local function createResourceFaderConfig()
+    return {
+        enableMouseover = true,
+        enableCombat = true,
+        fadeInAlpha = 1,
+        fadeOutAlpha = 0,
+        fadeInDuration = 0.15,
+        fadeOutDuration = 0.15,
+        fadeInSmooth = "IN_OUT",
+        fadeOutSmooth = "IN_OUT",
+        inCombatAlpha = 1,
+        outCombatAlpha = 0,
+        inCombatDuration = 0.15,
+        outCombatDuration = 0.15,
+        inCombatSmooth = "IN_OUT",
+        outCombatSmooth = "IN_OUT",
+        skipEnableMouse = true,
+        skipMouseoverHooks = true,
+    }
 end
 
 ---------------------------------------------------------------------------
@@ -211,8 +253,6 @@ end
 -- Secondary Power: Update Logic
 ---------------------------------------------------------------------------
 
-local previousPipValues = {}
-
 local function updatePips_Standard(powerType, colorKey, maxOverride)
     local current = UnitPower("player", powerType)
     local max = maxOverride or UnitPowerMax("player", powerType)
@@ -232,13 +272,7 @@ local function updatePips_Standard(powerType, colorKey, maxOverride)
         local filled = (i <= current) and 1 or 0
         pip:SetStatusBarColor(r, g, b)
         pip:SetValue(filled)
-
-        -- Play gain animation when a pip fills
-        if filled == 1 and (previousPipValues[i] or 0) == 0 then
-            pip.gainAnim:Stop()
-            pip.gainAnim:Play()
-        end
-        previousPipValues[i] = filled
+        playPipGainIfNew(pip, i, filled)
     end
 end
 
@@ -266,12 +300,7 @@ local function updatePips_ComboPoints()
             pip:SetStatusBarColor(r, g, b)
         end
         pip:SetValue(filled)
-
-        if filled == 1 and (previousPipValues[i] or 0) == 0 then
-            pip.gainAnim:Stop()
-            pip.gainAnim:Play()
-        end
-        previousPipValues[i] = filled
+        playPipGainIfNew(pip, i, filled)
     end
 end
 
@@ -285,7 +314,6 @@ local function updateRunes()
     local r, g, b = getSecondaryColor(colorKey)
 
     -- Collect rune data and sort: ready first, then by remaining CD
-    local runes = {}
     for i = 1, 6 do
         local start, duration, ready = GetRuneCooldown(i)
         local remaining = 0
@@ -293,17 +321,19 @@ local function updateRunes()
             remaining = (start + duration) - GetTime()
             if remaining < 0 then remaining = 0 end
         end
-        runes[i] = { index = i, ready = ready, remaining = remaining, start = start, duration = duration }
+        local entry = runeData[i]
+        entry.index = i
+        entry.ready = ready
+        entry.remaining = remaining
+        entry.start = start
+        entry.duration = duration
     end
 
-    table.sort(runes, function(a, b)
-        if a.ready ~= b.ready then return a.ready end
-        return a.remaining < b.remaining
-    end)
+    table.sort(runeData, runeSort)
 
     for i = 1, 6 do
         local pip = secondaryPips[i]
-        local rune = runes[i]
+        local rune = runeData[i]
         if not pip or not rune then break end
 
         pip:SetStatusBarColor(r, g, b)
@@ -377,12 +407,7 @@ local function updateMaelstromWeapon()
         local filled = (i <= stacks) and 1 or 0
         pip:SetStatusBarColor(r, g, b)
         pip:SetValue(filled)
-
-        if filled == 1 and (previousPipValues[i] or 0) == 0 then
-            pip.gainAnim:Stop()
-            pip.gainAnim:Play()
-        end
-        previousPipValues[i] = filled
+        playPipGainIfNew(pip, i, filled)
     end
 end
 
@@ -431,19 +456,10 @@ local function updateEssence()
         local pip = secondaryPips[i]
         if not pip then break end
 
-        pip:SetStatusBarColor(r, g, b)
-        if i <= current then
-            pip:SetValue(1)
-        else
-            pip:SetValue(0)
-        end
-
         local filled = (i <= current) and 1 or 0
-        if filled == 1 and (previousPipValues[i] or 0) == 0 then
-            pip.gainAnim:Stop()
-            pip.gainAnim:Play()
-        end
-        previousPipValues[i] = filled
+        pip:SetStatusBarColor(r, g, b)
+        pip:SetValue(filled)
+        playPipGainIfNew(pip, i, filled)
     end
 end
 
@@ -499,35 +515,6 @@ local function createSecondaryFrame()
 end
 
 ---------------------------------------------------------------------------
--- Spec Change / Initialization
----------------------------------------------------------------------------
-
-local function refreshSpec()
-    currentSpecID = getSpecID()
-    currentSecondary = C.specResources[currentSpecID]
-
-    -- Refresh primary power
-    refreshPrimaryPowerType()
-
-    -- Reset secondary — clear stale state before rebuilding
-    wipe(previousPipValues)
-    clearSecondaryPips()
-    runeUpdateElapsed = 0
-
-    local cfg = C.resources.primaryBar
-    if currentSecondary and secondaryFrame then
-        -- Secondary exists: primary gets 25% height
-        if primaryBar then primaryBar:SetHeight(cfg.height) end
-        secondaryFrame:Show()
-        updateSecondary()
-    elseif secondaryFrame then
-        -- No secondary: primary expands to 50% height
-        if primaryBar then primaryBar:SetHeight(cfg.expandedHeight) end
-        secondaryFrame:Hide()
-    end
-end
-
----------------------------------------------------------------------------
 -- OnUpdate for smooth rune/essence recharge
 ---------------------------------------------------------------------------
 
@@ -548,6 +535,44 @@ local function onUpdate(self, elapsed)
             runeUpdateElapsed = 0
             updateEssence()
         end
+    end
+end
+
+---------------------------------------------------------------------------
+-- Spec Change / Initialization
+---------------------------------------------------------------------------
+
+local function refreshSpec()
+    currentSpecID = getSpecID()
+    currentSecondary = C.specResources[currentSpecID]
+
+    -- Refresh primary power
+    refreshPrimaryPowerType()
+
+    -- Reset secondary — clear stale state before rebuilding
+    wipe(previousPipValues)
+    clearSecondaryPips()
+    runeUpdateElapsed = 0
+
+    -- Only run OnUpdate for specs that need tick-based recharge animation
+    if secondaryFrame then
+        local needsTick = currentSecondary and (
+            currentSecondary.powerType == Enum.PowerType.Runes or
+            currentSecondary.powerType == Enum.PowerType.Essence
+        )
+        secondaryFrame:SetScript("OnUpdate", needsTick and onUpdate or nil)
+    end
+
+    local cfg = C.resources.primaryBar
+    if currentSecondary and secondaryFrame then
+        -- Secondary exists: primary gets 25% height
+        if primaryBar then primaryBar:SetHeight(cfg.height) end
+        secondaryFrame:Show()
+        updateSecondary()
+    elseif secondaryFrame then
+        -- No secondary: primary expands to 50% height
+        if primaryBar then primaryBar:SetHeight(cfg.expandedHeight) end
+        secondaryFrame:Hide()
     end
 end
 
@@ -635,29 +660,9 @@ function Resources.Initialize()
     eventFrame:RegisterUnitEvent("UNIT_HEALTH", "player")
     eventFrame:SetScript("OnEvent", onEvent)
 
-    -- OnUpdate for smooth rune/essence recharge
-    secondaryFrame:SetScript("OnUpdate", onUpdate)
-
     -- Register with fader system if setting is enabled
     if ns.Fader and ns.Settings and ns.Settings.GetOption("resourceFader") then
-        local faderConfig = {
-            enableMouseover = true,
-            enableCombat = true,
-            fadeInAlpha = 1,
-            fadeOutAlpha = 0,
-            fadeInDuration = 0.15,
-            fadeOutDuration = 0.15,
-            fadeInSmooth = "IN_OUT",
-            fadeOutSmooth = "IN_OUT",
-            inCombatAlpha = 1,
-            outCombatAlpha = 0,
-            inCombatDuration = 0.15,
-            outCombatDuration = 0.15,
-            inCombatSmooth = "IN_OUT",
-            outCombatSmooth = "IN_OUT",
-            skipEnableMouse = true,
-            skipMouseoverHooks = true,
-        }
+        local faderConfig = createResourceFaderConfig()
         ns.Fader.Create(primaryBar, faderConfig)
         ns.Fader.Create(secondaryFrame, faderConfig)
     end
@@ -692,24 +697,7 @@ end
 
 function Resources.ToggleFader(value)
     if not ns.Fader then return end
-    local faderConfig = {
-        enableMouseover = true,
-        enableCombat = true,
-        fadeInAlpha = 1,
-        fadeOutAlpha = 0,
-        fadeInDuration = 0.15,
-        fadeOutDuration = 0.15,
-        fadeInSmooth = "IN_OUT",
-        fadeOutSmooth = "IN_OUT",
-        inCombatAlpha = 1,
-        outCombatAlpha = 0,
-        inCombatDuration = 0.15,
-        outCombatDuration = 0.15,
-        inCombatSmooth = "IN_OUT",
-        outCombatSmooth = "IN_OUT",
-        skipEnableMouse = true,
-        skipMouseoverHooks = true,
-    }
+    local faderConfig = createResourceFaderConfig()
     local frames = { primaryBar, secondaryFrame }
     for _, frame in ipairs(frames) do
         if frame then

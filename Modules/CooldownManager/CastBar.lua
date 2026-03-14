@@ -149,11 +149,6 @@ end
 -- Display Helpers
 ---------------------------------------------------------------------------
 
-local function truncateName(name)
-    if not name then return "" end
-    return name
-end
-
 local function formatTime(remaining)
     if remaining >= 5 then
         return string_format("%d", remaining)
@@ -200,7 +195,7 @@ local function startCast()
     holdTimer = 0
 
     castBarIcon:SetTexture(texture)
-    castBarText:SetText(truncateName(name))
+    castBarText:SetText(name or "")
     setBarColor("casting")
     castBar:SetMinMaxValues(0, 1)
     castBar:SetValue(0)
@@ -228,7 +223,7 @@ local function startChannel()
     holdTimer = 0
 
     castBarIcon:SetTexture(texture)
-    castBarText:SetText(truncateName(name))
+    castBarText:SetText(name or "")
     setBarColor("channeling")
     castBar:SetMinMaxValues(0, 1)
     castBar:SetValue(1)
@@ -256,7 +251,7 @@ local function startEmpower()
     holdTimer = 0
 
     castBarIcon:SetTexture(texture)
-    castBarText:SetText(truncateName(name))
+    castBarText:SetText(name or "")
     setBarColor("empowering")
     castBar:SetMinMaxValues(0, 1)
     castBar:SetValue(0)
@@ -288,6 +283,8 @@ end
 ---------------------------------------------------------------------------
 
 local function onUpdate(self, elapsed)
+    if not castBarContainer:IsShown() then return end
+
     -- Handle hold timer (brief display after cast ends)
     if holdTimer > 0 then
         holdTimer = holdTimer - elapsed

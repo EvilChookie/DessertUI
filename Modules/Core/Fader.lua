@@ -187,6 +187,7 @@ end
 -- Shared OnUpdate ticker for all mouseover-faded frames
 local tickerFrame = CreateFrame("Frame")
 tickerFrame.elapsed = 0
+tickerFrame:Hide() -- Start hidden; shown when first mouseover frame registers
 tickerFrame:SetScript("OnUpdate", function(self, elapsed)
     self.elapsed = self.elapsed + elapsed
     if self.elapsed < 0.12 then return end
@@ -228,6 +229,7 @@ local function SetupMouseoverFader(frame, faderConfig)
 
     -- Register with shared ticker for edge-case polling
     mouseoverFrames[frame] = true
+    tickerFrame:Show()
 
     FrameHandler(frame)
 end

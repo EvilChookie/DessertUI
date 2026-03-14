@@ -34,6 +34,7 @@ DessertUI incorporates ideas and techniques from the following projects:
 - [oUF](https://github.com/oUF-wow/oUF) - Unit frame framework
 - [LibStub](hhttps://github.com/lua-wow/LibStub) - Library versioning
 - [LibDispel](https://github.com/lua-wow/LibDispel) - Dispel type detection
+- [LibEditModeOverride](https://github.com/plusmouse/LibEditModeOverride) - Edit Mode Utilities
 
 ## License
 

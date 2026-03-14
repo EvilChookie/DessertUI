@@ -16,33 +16,34 @@ local string_format = string.format
 -- Cache CurveConstants with fallback for safety
 local SCALE_TO_100 = CurveConstants and CurveConstants.ScaleTo100 or nil
 
+-- Shared helper: returns colored name string or nil if no name
+local function getColoredName(u)
+    local _, class = UnitClass(u)
+    local reaction = UnitReaction(u, "player")
+    local name = UnitName(u)
+    if not name then return nil end
+
+    local color
+    if UnitIsDead(u) or UnitIsGhost(u) or not UnitIsConnected(u) then
+        color = "|cffA0A0A0"
+    elseif UnitIsTapDenied(u) then
+        color = Utils.Hex(oUF.colors.tapped)
+    elseif u == "pet" then
+        color = Utils.Hex(oUF.colors.class[class])
+    elseif UnitIsPlayer(u) then
+        color = Utils.Hex(oUF.colors.class[class])
+    elseif reaction then
+        color = Utils.Hex(oUF.colors.reaction[reaction])
+    else
+        color = Utils.Hex(1, 1, 1)
+    end
+
+    return color .. name .. "|r"
+end
+
 oUF.Tags.Events["dUI_Name"] = "UNIT_HEALTH UNIT_CLASSIFICATION_CHANGED UNIT_CONNECTION UNIT_FACTION UNIT_NAME_UPDATE"
 oUF.Tags.Methods["dUI_Name"] = function(u)
-	local _, class = UnitClass(u)
-    local reaction = UnitReaction(u, "player")
-    local name = GetUnitName(u)
-    local color
-
-    -- Protect against nil name
-    if not name then
-        return ""
-    end
-
-	if UnitIsDead(u) or UnitIsGhost(u) or not UnitIsConnected(u) then
-		color = "|cffA0A0A0"
-	elseif UnitIsTapDenied(u) then
-		color = Utils.Hex(oUF.colors.tapped)
-	elseif u == "pet" then
-		color = Utils.Hex(oUF.colors.class[class])
-	elseif UnitIsPlayer(u) then
-		color = Utils.Hex(oUF.colors.class[class])
-	elseif reaction then
-		color = Utils.Hex(oUF.colors.reaction[reaction])
-	else
-		color = Utils.Hex(1, 1, 1)
-    end
-
-    return (color .. name .."|r")
+    return getColoredName(u) or ""
 end
 
 -- A quick tag for status (Dead, Disconnect or Ghost)
@@ -68,7 +69,7 @@ oUF.Tags.Methods["dUI_Classification"] = function(u)
 end
 
 -- Colour our health absed on percentage. As health goes up or down increases the amount of red or green that's present
-oUF.Tags.Events["dUI_HP"] = 'UNIT_HEALTH UNIT_MAXHEALTH UNIT_CLASSIFICATION_CHANGED'
+oUF.Tags.Events["dUI_HP"] = 'UNIT_HEALTH UNIT_MAXHEALTH'
 oUF.Tags.Methods["dUI_HP"] = function(u)
     -- Use UnitHealthPercent to handle secret health values
     -- Using white color for now to avoid arithmetic on secret values
@@ -77,7 +78,7 @@ oUF.Tags.Methods["dUI_HP"] = function(u)
 end
 
 -- Health percentage with class color (for player)
-oUF.Tags.Events["dUI_HP_Class"] = 'UNIT_HEALTH UNIT_MAXHEALTH UNIT_CLASSIFICATION_CHANGED'
+oUF.Tags.Events["dUI_HP_Class"] = 'UNIT_HEALTH UNIT_MAXHEALTH'
 oUF.Tags.Methods["dUI_HP_Class"] = function(u)
     -- Use UnitHealthPercent to handle secret health values
     local healthPercentage = UnitHealthPercent(u, true, SCALE_TO_100)
@@ -95,51 +96,24 @@ end
 
 
 -- Short health value using ShortNumber function
-oUF.Tags.Events["dUI_ShortHP"] = 'UNIT_HEALTH UNIT_MAXHEALTH UNIT_CLASSIFICATION_CHANGED'
+oUF.Tags.Events["dUI_ShortHP"] = 'UNIT_HEALTH UNIT_MAXHEALTH'
 oUF.Tags.Methods["dUI_ShortHP"] = function(u)
-    local health = UnitHealth(u)
-    return Utils.ShortNumber(health)
+    return AbbreviateLargeNumbers(UnitHealth(u))
 end
 
 -- Short health with max health (e.g., "2.5k/5.0k")
-oUF.Tags.Events["dUI_ShortHPFull"] = 'UNIT_HEALTH UNIT_MAXHEALTH UNIT_CLASSIFICATION_CHANGED'
+oUF.Tags.Events["dUI_ShortHPFull"] = 'UNIT_HEALTH UNIT_MAXHEALTH'
 oUF.Tags.Methods["dUI_ShortHPFull"] = function(u)
-    local health = UnitHealth(u)
-    local maxHealth = UnitHealthMax(u)
-    return string_format("%s/%s", Utils.ShortNumber(health), Utils.ShortNumber(maxHealth))
+    return string_format("%s/%s", AbbreviateLargeNumbers(UnitHealth(u)), AbbreviateLargeNumbers(UnitHealthMax(u)))
 end
 
 -- Combined tag: Health percentage and name in one string
 -- This avoids needing to calculate string widths on secret values
 oUF.Tags.Events["dUI_HPAndName"] = 'UNIT_HEALTH UNIT_MAXHEALTH UNIT_CLASSIFICATION_CHANGED UNIT_CONNECTION UNIT_FACTION UNIT_NAME_UPDATE'
 oUF.Tags.Methods["dUI_HPAndName"] = function(u)
-    -- Get health percentage (white color)
     local healthPercentage = UnitHealthPercent(u, true, SCALE_TO_100)
     local healthText = string_format("|cffffffff%.0f%%|r", healthPercentage)
-
-    -- Get colored name
-    local _, class = UnitClass(u)
-    local reaction = UnitReaction(u, "player")
-    local name = GetUnitName(u)
-    local color
-
-    if not name then
-        return healthText
-    end
-
-    if UnitIsDead(u) or UnitIsGhost(u) or not UnitIsConnected(u) then
-        color = "|cffA0A0A0"
-    elseif UnitIsTapDenied(u) then
-        color = Utils.Hex(oUF.colors.tapped)
-    elseif u == "pet" then
-        color = Utils.Hex(oUF.colors.class[class])
-    elseif UnitIsPlayer(u) then
-        color = Utils.Hex(oUF.colors.class[class])
-    elseif reaction then
-        color = Utils.Hex(oUF.colors.reaction[reaction])
-    else
-        color = Utils.Hex(1, 1, 1)
-    end
-
-    return healthText .. " " .. color .. name .. "|r"
+    local coloredName = getColoredName(u)
+    if not coloredName then return healthText end
+    return healthText .. " " .. coloredName
 end

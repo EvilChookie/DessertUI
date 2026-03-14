@@ -22,22 +22,10 @@ local function ApplyPosition(frame, positionKey)
         ns.Utils.PrintMessage(string_format("Position constant '%s' not found", tostring(positionKey)))
         return
     end
-    
-    local pos = positions[positionKey]
-    local relativeFrame = UIParent
-    
-    -- Handle relative frame selection
-    if pos.relative == "CENTER" then
-        relativeFrame = UIParent
-    elseif pos.relative == "TOPRIGHT" then
-        relativeFrame = UIParent
-    elseif pos.relative == "TOPLEFT" then
-        relativeFrame = UIParent
-    end
-    
-    frame:SetPoint(pos.point, relativeFrame, pos.relative, pos.x, pos.y)
 
-    -- Snap to pixel grid after positioning
+    local pos = positions[positionKey]
+    frame:SetPoint(pos.point, UIParent, pos.relative, pos.x, pos.y)
+
     if ns.PixelPerfect then
         ns.PixelPerfect.Snap(frame)
     end
@@ -77,116 +65,6 @@ local function CreateStyle(self, unit)
     if unit and unit:match("^boss%d") and UnitFrames.BossStyle then
         return UnitFrames.BossStyle(self, unit)
     end
-
-    -- Generic style for other units - using Constants for dimensions
-    local dimensions = ns.Constants.unitFrames.dimensions.base
-    local width, height = dimensions.width, dimensions.height
-    if unit == "target" then
-        width, height = 200, 40
-    end
-    self:SetSize(width, height)
-    self:SetPoint("CENTER")
-
-    -- Create unified glow (used for shadow, hover, target states)
-    self.UnifiedGlow = UnitFrames:CreateShadowGlow(self, 4)
-    self.UnifiedGlow:SetBackdropBorderColor(0, 0, 0, 0.4) -- Default to subtle shadow
-    self.UnifiedGlow:Show() -- Always visible
-    
-    -- Create frame background with high-contrast dark slate
-    self.Background = self:CreateTexture(nil, "BACKGROUND")
-    self.Background:SetAllPoints()
-    self.Background:SetTexture("Interface\\Buttons\\WHITE8X8")
-    self.Background:SetVertexColor(0.15, 0.17, 0.2, 0.95) -- Dark slate background
-    
-    -- Create health bar
-    self.Health = CreateFrame("StatusBar", nil, self)
-    self.Health:SetAllPoints()
-    self.Health:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-
-    -- Create health bar background
-    self.Health.bg = self.Health:CreateTexture(nil, "BACKGROUND")
-    self.Health.bg:SetAllPoints()
-    self.Health.bg:SetTexture("Interface\\TargetingFrame\\UI-StatusBar")
-    self.Health.bg.multiplier = 0.25 -- oUF will automatically darken the health color for background
-    
-    -- Enable class-based coloring
-    self.Health.colorClass = true
-    self.Health.colorReaction = true
-    self.Health.colorHealth = true
-    
-    -- Create power bar (always create, but conditionally show based on power type)
-    self.Power = CreateFrame("StatusBar", nil, self)
-    self.Power:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", 0, -5) -- Move down by power bar height
-    self.Power:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, -5)
-    self.Power:SetHeight(5)
-    self.Power:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-    
-    -- Enable power type coloring
-    self.Power.colorPower = true
-    self.Power.colorClass = true
-    self.Power.colorReaction = true
-    
-    -- Power bar visibility logic - simplified approach
-    self.Power.PreUpdate = function(element, unit)
-        if not unit then return end
-        local powerType, powerToken = UnitPowerType(unit)
-        local shouldShow = (powerToken == "MANA")
-        
-        if shouldShow then
-            element:Show()
-        else
-            element:Hide()
-        end
-    end
-    
-    -- Health bar now fills the entire (now taller) frame
-    self.Health:ClearAllPoints()
-    self.Health:SetAllPoints(self)
-
-    -- Position power bar on top of health bar with higher z-index
-    self.Power:SetFrameLevel(self:GetFrameLevel() + 2)
-
-    -- Store glow color states for unified glow system (using Constants for consistency)
-    self.glowStates = ns.Constants.unitFrames.glowColors
-    
-    -- Remove old target outline system - now using TargetGlowFrame
-    
-    -- Hover scripts with unified glow
-    self:SetScript("OnEnter", function(self)
-        if self.UnifiedGlow then
-            local isTargeted = UnitIsUnit(self.unit or "none", "target")
-            local glowColor = UnitFrames:GetFrameGlowState(self, true, isTargeted)
-            self.UnifiedGlow:SetBackdropBorderColor(unpack(glowColor))
-        end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetUnit(self.unit or "player")
-        GameTooltip:Show()
-    end)
-    
-    self:SetScript("OnLeave", function(self)
-        if self.UnifiedGlow then
-            local isTargeted = UnitIsUnit(self.unit or "none", "target")
-            local glowColor = UnitFrames:GetFrameGlowState(self, false, isTargeted)
-            self.UnifiedGlow:SetBackdropBorderColor(unpack(glowColor))
-        end
-        GameTooltip:Hide()
-    end)
-    
-    -- Initial glow state check
-    if self.UnifiedGlow then
-        local isTargeted = UnitIsUnit(self.unit or "none", "target")
-        local glowColor = UnitFrames:GetFrameGlowState(self, false, isTargeted)
-        self.UnifiedGlow:SetBackdropBorderColor(unpack(glowColor))
-    end
-    
-    -- Name text (adjusted for visual center accounting for power bar space)
-    self.Name = self.Health:CreateFontString(nil, "OVERLAY")
-    self.Name:SetPoint("LEFT", self, "LEFT", 8, -2.5) -- Shift down by half power bar height
-    self.Name:SetFont("Fonts\\FRIZQT__.TTF", 10)
-    self.Name:SetTextColor(1, 1, 1)
-    self.Name:SetShadowOffset(1, -1)
-    self.Name:SetShadowColor(0, 0, 0, 0.8)
-    self:Tag(self.Name, "[name]")
 end
 
 -- Register the base style
@@ -228,12 +106,12 @@ function UnitFrames:GetDispellableDebuffType(unit)
     if not UnitExists(unit) then return nil end
     
     -- Check all debuffs on the unit using C_UnitAuras for better data
+    local useNewAPI = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex
     local auraData
     for i = 1, 40 do
-        if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+        if useNewAPI then
             auraData = C_UnitAuras.GetAuraDataByIndex(unit, i, "HARMFUL")
         else
-            -- Fallback to old API
             local name, _, _, debuffType, _, _, _, _, _, spellId = UnitDebuff(unit, i)
             if not name then break end
             auraData = {
@@ -243,11 +121,11 @@ function UnitFrames:GetDispellableDebuffType(unit)
                 isHarmful = true
             }
         end
-        
+
         if not auraData then break end
-        
+
         if CanCureDebuff(unit, auraData) then
-            return auraData.dispelName -- Return first dispellable debuff type found
+            return auraData.dispelName
         end
     end
     

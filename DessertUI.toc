@@ -51,6 +51,9 @@ Modules\Core\Settings.lua
 Modules\CooldownManager\Resources.lua
 Modules\CooldownManager\CastBar.lua
 
+# Mirror Bar (breath, fatigue, feign death)
+Modules\MirrorBar\MirrorBar.lua
+
 # Layout
 Modules\Layout\Layout.lua
 

@@ -13,6 +13,9 @@ local function InitializeCooldownManager()
     if ns.CastBar then
         ns.CastBar.Initialize()
     end
+    if ns.MirrorBar then
+        ns.MirrorBar.Initialize()
+    end
 end
 
 local function Welcome()
