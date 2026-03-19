@@ -11,6 +11,13 @@ local addon, ns = ...
 ns.hasBartender4 = C_AddOns.IsAddOnLoaded("Bartender4")
 
 ns.Constants = {
+    -- Data Bar Configuration
+    databar = {
+        height = 22,
+        opacity = 0.8,
+        verticalOffset = -0.5,
+    },
+
     -- Frame sizing constants for better mouse interaction and text accommodation
     frames = {
         positions = {
@@ -249,6 +256,7 @@ ns.Constants = {
             "showSecondaryPower",
             "resourceFader",
             "showMirrorBar",
+            "showDataBar",
         },
 
         useDessertUILayout = {
@@ -326,6 +334,17 @@ ns.Constants = {
             type = "toggle",
             realtime = true,
             callback = "Faders.ToggleUnitFaderSilent",
+        },
+
+        showDataBar = {
+            name = "Data Bar",
+            variable = "showDataBar",
+            variableKey = "showDataBar",
+            tooltip = "Show the data bar panel across the bottom of the screen.",
+            defaultValue = true,
+            type = "toggle",
+            realtime = true,
+            callback = "DataBar.Toggle",
         },
 
         actionBarFader = {

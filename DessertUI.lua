@@ -16,6 +16,9 @@ local function InitializeCooldownManager()
     if ns.MirrorBar then
         ns.MirrorBar.Initialize()
     end
+    if ns.DataBar then
+        ns.DataBar.Initialize()
+    end
 end
 
 local function Welcome()
