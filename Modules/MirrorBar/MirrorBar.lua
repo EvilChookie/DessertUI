@@ -63,7 +63,9 @@ end
 local function getBarYOffset(index)
     -- Each bar slot: text height (8pt) + bar height + spacing
     local slotHeight = 8 + C.textOffset + C.barHeight + C.spacing
-    return -(slotHeight * (index - 1))
+    -- Extra offset to clear the abbreviated HP text below the player frame
+    local hpTextOffset = 12
+    return -(hpTextOffset + slotHeight * (index - 1))
 end
 
 local function createBar(timerName, index)

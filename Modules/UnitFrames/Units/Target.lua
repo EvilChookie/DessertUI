@@ -65,8 +65,17 @@ local function TargetStyle(self, unit)
         button.Count:SetPoint("BOTTOMRIGHT", 1, 0)
     end
     
+    -- Health value (abbreviated, e.g., "125K")
+    self.HealthValue = self:CreateFontString(nil, "OVERLAY")
+    self.HealthValue:SetFont(ns.Constants.fonts.atkinsonHyperlegible, 10, "OUTLINE")
+    self.HealthValue:SetTextColor(0.8, 0.8, 0.8, 1)
+    self.HealthValue:SetShadowOffset(1, -1)
+    self.HealthValue:SetPoint("TOPLEFT", self.HealthPercent, "BOTTOMLEFT", 0, 4)
+    self.HealthValue:SetJustifyH("LEFT")
+
     -- Register tags
     self:Tag(self.HealthPercent, "[dUI_HP]")
+    self:Tag(self.HealthValue, "[dUI_ShortHP]")
     self:Tag(self.Name, "[dUI_Name]")
     self:Tag(self.Classification, "[dUI_Classification] [dUI_Status]")
 

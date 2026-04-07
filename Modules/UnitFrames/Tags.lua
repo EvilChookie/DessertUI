@@ -50,11 +50,11 @@ end
 oUF.Tags.Events["dUI_Status"] = 'UNIT_HEALTH UNIT_CLASSIFICATION_CHANGED'
 oUF.Tags.Methods["dUI_Status"] = function(u)
 	if UnitIsDead(u) then
-		return "|cffCFCFCF(Dead)|r"
+		return "DEAD"
 	elseif UnitIsGhost(u) then
-		return "|cffCFCFCF(Ghost)|r"
+		return "GHOST"
 	elseif not UnitIsConnected(u) then
-		return "|cffCFCFCF(Offline)|r"
+		return "OFFLINE"
 	end
 end
 
@@ -95,16 +95,16 @@ oUF.Tags.Methods["dUI_HP_Class"] = function(u)
 end
 
 
--- Short health value using ShortNumber function
+-- Short health value using AbbreviateNumbers (handles secret values in Midnight)
 oUF.Tags.Events["dUI_ShortHP"] = 'UNIT_HEALTH UNIT_MAXHEALTH'
 oUF.Tags.Methods["dUI_ShortHP"] = function(u)
-    return AbbreviateLargeNumbers(UnitHealth(u))
+    return AbbreviateNumbers(UnitHealth(u))
 end
 
 -- Short health with max health (e.g., "2.5k/5.0k")
 oUF.Tags.Events["dUI_ShortHPFull"] = 'UNIT_HEALTH UNIT_MAXHEALTH'
 oUF.Tags.Methods["dUI_ShortHPFull"] = function(u)
-    return string_format("%s/%s", AbbreviateLargeNumbers(UnitHealth(u)), AbbreviateLargeNumbers(UnitHealthMax(u)))
+    return string_format("%s/%s", AbbreviateNumbers(UnitHealth(u)), AbbreviateNumbers(UnitHealthMax(u)))
 end
 
 -- Combined tag: Health percentage and name in one string
