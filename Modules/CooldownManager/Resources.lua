@@ -599,6 +599,11 @@ local function onEvent(self, event, ...)
         clearSecondaryPips()
         updateSecondary()
 
+    elseif event == "UNIT_DISPLAYPOWER" then
+        local unit = ...
+        if unit ~= "player" then return end
+        refreshPrimaryPowerType()
+
     elseif event == "UPDATE_SHAPESHIFT_FORM" then
         refreshPrimaryPowerType()
         updateSecondary()
@@ -654,6 +659,7 @@ function Resources.Initialize()
     eventFrame:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
     eventFrame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
     eventFrame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+    eventFrame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
     eventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
     eventFrame:RegisterEvent("RUNE_POWER_UPDATE")
     eventFrame:RegisterUnitEvent("UNIT_AURA", "player")

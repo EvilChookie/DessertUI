@@ -13,6 +13,8 @@ local DataBar = ns.DataBar
 
 -- Cached functions
 local GetFramerate = GetFramerate
+local GetInventoryItemDurability = GetInventoryItemDurability
+local GetInventoryItemLink = GetInventoryItemLink
 local UnitXP = UnitXP
 local UnitXPMax = UnitXPMax
 local GetXPExhaustion = GetXPExhaustion
@@ -83,6 +85,59 @@ local function updateRepText(f)
 end
 
 ---------------------------------------------------------------------------
+-- Durability helpers
+---------------------------------------------------------------------------
+
+local DURABILITY_SLOTS = {
+    INVSLOT_HEAD, INVSLOT_SHOULDER, INVSLOT_CHEST, INVSLOT_WAIST,
+    INVSLOT_LEGS, INVSLOT_FEET, INVSLOT_WRIST, INVSLOT_HAND,
+    INVSLOT_MAINHAND, INVSLOT_OFFHAND, INVSLOT_RANGED,
+}
+
+local SLOT_NAMES = {
+    [INVSLOT_HEAD] = "Head",
+    [INVSLOT_SHOULDER] = "Shoulder",
+    [INVSLOT_CHEST] = "Chest",
+    [INVSLOT_WAIST] = "Waist",
+    [INVSLOT_LEGS] = "Legs",
+    [INVSLOT_FEET] = "Feet",
+    [INVSLOT_WRIST] = "Wrist",
+    [INVSLOT_HAND] = "Hands",
+    [INVSLOT_MAINHAND] = "Main Hand",
+    [INVSLOT_OFFHAND] = "Off Hand",
+    [INVSLOT_RANGED] = "Ranged",
+}
+
+local function getDurabilityPercent()
+    local total_current, total_max = 0, 0
+    local lowest = 1
+    for _, slot in ipairs(DURABILITY_SLOTS) do
+        local current, max = GetInventoryItemDurability(slot)
+        if current and max and max > 0 then
+            total_current = total_current + current
+            total_max = total_max + max
+            local slot_pct = current / max
+            if slot_pct < lowest then lowest = slot_pct end
+        end
+    end
+    local pct = total_max > 0 and (total_current / total_max * 100) or 100
+    return pct, lowest
+end
+
+local function updateDurabilityText(f)
+    if not f.durabilityText then return end
+    local pct, lowest = getDurabilityPercent()
+    local r, g, b = 1, 1, 1
+    if lowest < 0.25 then
+        r, g, b = 1, 0.2, 0.2
+    elseif lowest < 0.5 then
+        r, g, b = 1, 0.8, 0.2
+    end
+    f.durabilityText:SetText(string_format("%.0f%% dur", pct))
+    f.durabilityText:SetTextColor(r, g, b)
+end
+
+---------------------------------------------------------------------------
 -- Hide Blizzard status tracking bars
 ---------------------------------------------------------------------------
 
@@ -123,25 +178,27 @@ local function createFrame()
     f:SetHeight(ns.Constants.databar.height)
     f:SetFrameStrata("BACKGROUND")
 
-    -- Solid slate background
+    -- Class-colored background — same atlas the ObjectiveTracker header uses,
+    -- desaturated and vertex-tinted with the class color (matches FrameColor).
+    local _, class = UnitClass("player")
+    local class_color = class and RAID_CLASS_COLORS[class]
+    local cr, cg, cb = 0.28, 0.28, 0.28
+    if class_color then
+        cr, cg, cb = class_color.r, class_color.g, class_color.b
+    end
+
+    local BG_TINT = 0.3
     local bg = f:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
-    bg:SetColorTexture(0.15, 0.17, 0.2, ns.Constants.databar.opacity)
+    bg:SetColorTexture(cr * BG_TINT, cg * BG_TINT, cb * BG_TINT, ns.Constants.databar.opacity)
     f.bg = bg
 
-    -- 1px class-colored top border
+    -- 1px class-colored top border (full saturation for contrast)
     local border = f:CreateTexture(nil, "BORDER")
     border:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
     border:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 0)
     border:SetHeight(1)
-
-    local _, class = UnitClass("player")
-    local color = class and RAID_CLASS_COLORS[class]
-    if color then
-        border:SetColorTexture(color.r, color.g, color.b, 1)
-    else
-        border:SetColorTexture(1, 1, 1, 1)
-    end
+    border:SetColorTexture(cr, cg, cb, 1)
     f.border = border
 
     -- FPS text (left side)
@@ -158,6 +215,61 @@ local function createFrame()
 
     -- Anchor for right-side datatexts (XP and rep chain rightward from here)
     local right_anchor = { frame = f, point = "RIGHT", x = -10 }
+
+    -- Durability datatext (rightmost)
+    do
+        local dur_frame = CreateFrame("Frame", nil, f)
+        dur_frame:SetSize(70, ns.Constants.databar.height)
+        dur_frame:SetPoint("RIGHT", right_anchor.frame, right_anchor.point, right_anchor.x, 0)
+        right_anchor = { frame = dur_frame, point = "LEFT", x = -20 }
+
+        local dur_text = dur_frame:CreateFontString(nil, "OVERLAY")
+        dur_text:SetFont(ns.Constants.fonts.atkinsonHyperlegible, 10, "OUTLINE")
+        dur_text:SetPoint("CENTER", dur_frame, "CENTER", 0, ns.Constants.databar.verticalOffset)
+        f.durabilityText = dur_text
+
+        dur_frame:EnableMouse(true)
+        dur_frame:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:AddLine("Durability", 1, 1, 1)
+
+            local pct = getDurabilityPercent()
+            GameTooltip:AddDoubleLine("Total", string_format("%.1f%%", pct), 1, 1, 1, 1, 1, 1)
+
+            local any_damaged = false
+            for _, slot in ipairs(DURABILITY_SLOTS) do
+                local current, max = GetInventoryItemDurability(slot)
+                if current and max and max > 0 and current < max then
+                    if not any_damaged then
+                        GameTooltip:AddLine(" ")
+                        any_damaged = true
+                    end
+                    local slot_pct = current / max * 100
+                    local link = GetInventoryItemLink("player", slot)
+                    local label = link or SLOT_NAMES[slot] or ("Slot " .. slot)
+                    local r, g, b = 1, 1, 1
+                    if slot_pct < 25 then
+                        r, g, b = 1, 0.2, 0.2
+                    elseif slot_pct < 50 then
+                        r, g, b = 1, 0.8, 0.2
+                    end
+                    GameTooltip:AddDoubleLine(label, string_format("%.0f%%", slot_pct), 1, 1, 1, r, g, b)
+                end
+            end
+
+            if not any_damaged then
+                GameTooltip:AddLine(" ")
+                GameTooltip:AddLine("All items at full durability.", 0.5, 1, 0.5)
+            end
+
+            GameTooltip:Show()
+        end)
+        dur_frame:SetScript("OnLeave", GameTooltip_Hide)
+        f.durabilityFrame = dur_frame
+
+        f:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
+        f:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+    end
 
     -- XP datatext (right side, only if not max level)
     local is_max_level = UnitLevel("player") >= GetMaxLevelForPlayerExpansion()
@@ -293,11 +405,16 @@ local function createFrame()
         if event == "UPDATE_FACTION" or event == "MAJOR_FACTION_RENOWN_LEVEL_CHANGED" then
             updateRepText(self)
         end
+
+        if event == "UPDATE_INVENTORY_DURABILITY" or event == "PLAYER_EQUIPMENT_CHANGED" then
+            updateDurabilityText(self)
+        end
     end)
 
     -- Initial text
     updateXPText(f)
     updateRepText(f)
+    updateDurabilityText(f)
 
     return f
 end

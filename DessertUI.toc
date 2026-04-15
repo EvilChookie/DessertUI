@@ -6,7 +6,6 @@
 ## SavedVariables: DessertUIDB
 ## X-oUF: DessertUI
 ## IconTexture: 237362
-## OptionalDeps: Masque, Bartender4
 
 # Unit Frames
 ## Category: Unit Frames
@@ -63,9 +62,7 @@ Modules\Layout\Layout.lua
 # Smaller Modules
 Modules\Faders\Faders.lua
 Modules\Hotkeys\Hotkeys.lua
-Modules\Chat\Chat.lua
 Modules\CombatText\CombatText.lua
-Modules\Masque\Masque.lua
 
 # UnitFrames Module
 Modules\UnitFrames\Tags.lua

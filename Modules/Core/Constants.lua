@@ -14,7 +14,7 @@ ns.Constants = {
     -- Data Bar Configuration
     databar = {
         height = 22,
-        opacity = 0.8,
+        opacity = 1,
         verticalOffset = -0.5,
     },
 

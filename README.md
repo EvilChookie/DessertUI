@@ -6,13 +6,17 @@ A custom World of Warcraft addon providing unit frames and UI enhancements.
 
 - Custom unit frames powered by oUF
 - Frame fading system (mouseover and combat-aware)
-- Masque skinning support for action bars, buffs/debuffs, and cooldown manager
 - Customizable settings via `/dui settings`
 
 ## Commands
 
 - `/dui` or `/dessertui` - Access addon commands
 - `/dui settings` - Open the settings panel
+
+## Recommended Addons:
+
+- [FrameColor](https://www.curseforge.com/wow/addons/framecolor-hud-action-bar-color)
+- [LSGlassRevive](https://www.curseforge.com/wow/addons/lsglassrevive)
 
 ## Attribution
 
@@ -21,13 +25,6 @@ DessertUI incorporates ideas and techniques from the following projects:
 ### [rLib](https://github.com/zorker/rothui) by zork
 - Frame fader animation system
 - Event callback registration pattern
-
-### [Masque Skinner: Blizz Buffs](https://github.com/ascott18/Masque-Skinner-Blizz-Buffs) by Cybeloras of Aerie Peak
-- Aura wrapper frame technique for skinning modern WoW's rectangular buff/debuff frames
-
-### [MasqueBlizzBars](https://github.com/SimGuy2014/MasqueBlizzBars) by SimGuy
-- Cooldown viewer skinning approach
-- Action bar region mapping patterns
 
 ## Libraries
 
